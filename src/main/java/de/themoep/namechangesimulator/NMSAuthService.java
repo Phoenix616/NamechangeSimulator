@@ -57,13 +57,12 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
 
         String nmsVersion = plugin.getServer().getClass().getPackage().getName().replace(".", ",").split(",")[3];
 
-        // v1_12_R1 obfuscation
         String sessionAuthVariableName;
         String sessionServiceVariableName;
 
         switch (nmsVersion) {
-            case "v1_10_R1":
             case "v1_9_R1":
+            case "v1_10_R1":
                 sessionServiceVariableName = "V";
                 sessionAuthVariableName = "U";
                 break;
