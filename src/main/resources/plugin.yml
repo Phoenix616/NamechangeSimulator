@@ -1,0 +1,32 @@
+name: NamechangeSimulator
+version: '${minecraft.plugin.version}'
+main: de.themoep.namechangesimulator.NamechangeSimulator
+load: STARTUP
+authors: [Phoenix616]
+description: Bukkit plugin to simulate name changes
+commands:
+   namechangesimulator:
+      aliases: [namechange, simulatenamechange, ns]
+      description: Command to change your name (or reset it)
+      usage: /<command> set [<player>] <name>|reset [<player>]|list
+      permission: namechangesimulator.command
+      permission-message: You don't have the permission <permission>
+permissions:
+   namechangesimulator.command:
+      description: Gives permission to the plugin command
+      default: op
+   namechangesimulator.command.set:
+      description: Gives permission to change names
+      default: op
+   namechangesimulator.command.set.others:
+      description: Gives permission to set the name of other players
+      default: op
+   namechangesimulator.command.reset:
+      description: Gives permission to reset names
+      default: op
+   namechangesimulator.command.reset.others:
+      description: Gives permission to reset the name of other players
+      default: op
+   namechangesimulator.command.list:
+      description: Gives permission to list all changed names
+      default: op
