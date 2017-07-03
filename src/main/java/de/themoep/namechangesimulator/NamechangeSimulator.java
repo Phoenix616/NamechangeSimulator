@@ -31,11 +31,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public final class NamechangeSimulator extends JavaPlugin {
 
     private BiMap<UUID, String> fakeNames = HashBiMap.create();
-    private BiMap<String, UUID> playerIds = HashBiMap.create();
 
     private final Pattern usernamePattern = Pattern.compile("^[a-zA-Z0-9_-]{3,16}$");//The regex to verify usernames;
 
@@ -123,8 +123,24 @@ public final class NamechangeSimulator extends JavaPlugin {
         } else if ("list".equalsIgnoreCase(args[0])) {
             sender.sendMessage(ChatColor.YELLOW + "Fake usernames:");
 
-            for (Map.Entry<UUID, String> entry : fakeNames.entrySet()) {
-                sender.sendMessage(playerIds.inverse().get(entry.getKey()) + " -> " + entry.getValue());
+            for (Map.Entry<UUID, String> entry : fakeNames.entrySet().stream().sorted((e1, e2) -> {
+                Player p1 = getServer().getPlayer(e1.getKey());
+                Player p2 = getServer().getPlayer(e2.getKey());
+                if (p1 == null && p2 == null) {
+                    return e1.getKey().compareTo(e2.getKey());
+                } else if (p1 == null) {
+                    return 1;
+                } else if (p2 == null) {
+                    return -1;
+                }
+                return p1.getName().compareTo(p2.getName());
+            }).collect(Collectors.toList())) {
+                Player p = getServer().getPlayer(entry.getKey());
+                if (p != null) {
+                    sender.sendMessage(ChatColor.WHITE + p.getName() + " -> " + entry.getValue());
+                } else {
+                    sender.sendMessage(ChatColor.GRAY + "" + entry.getKey() + " -> " + entry.getValue());
+                }
             }
         }
 
@@ -133,31 +149,25 @@ public final class NamechangeSimulator extends JavaPlugin {
     }
 
     private boolean setName(Player target, String name) {
-        if (getServer().getPlayer(name) != null || playerIds.containsKey(name.toLowerCase())) {
+        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name)) {
             return false;
         }
 
         fakeNames.put(target.getUniqueId(), name);
-        playerIds.put(target.getName().toLowerCase(), target.getUniqueId());
         target.kickPlayer("Please rejoin so that your changed name takes effect!");
         return true;
     }
 
     private boolean resetName(Player target) {
-        if (!playerIds.inverse().containsKey(target.getUniqueId())) {
+        if (!fakeNames.containsKey(target.getUniqueId())) {
             return false;
         }
         fakeNames.remove(target.getUniqueId());
-        playerIds.inverse().remove(target.getUniqueId());
         target.kickPlayer("Please rejoin so that your name reset takes effect!");
         return true;
     }
 
-    String getFakeName(UUID playerId) {
+    public String getFakeName(UUID playerId) {
         return fakeNames.get(playerId);
-    }
-
-    UUID getPlayerId(String userName) {
-        return playerIds.get(userName.toLowerCase());
     }
 }

@@ -27,7 +27,6 @@ import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
-import java.util.UUID;
 import java.util.logging.Level;
 
 public class NMSAuthService extends YggdrasilMinecraftSessionService {
@@ -41,16 +40,17 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
 
     @Override
     public GameProfile hasJoinedServer(GameProfile user, String serverId, InetAddress inetAddress) throws AuthenticationUnavailableException {
-
-        UUID playerId = plugin.getPlayerId(user.getName());
-        if (playerId != null) {
-            String fakeName = plugin.getFakeName(playerId);
-            if (fakeName != null) {
-                return new GameProfile(playerId, fakeName);
-            }
-
+        user = super.hasJoinedServer(user, serverId, inetAddress);
+        if (user == null) {
+            return null;
         }
-        return super.hasJoinedServer(user, serverId, inetAddress);
+        String fakeName = plugin.getFakeName(user.getId());
+        if (fakeName != null) {
+            GameProfile fakeUser = new GameProfile(user.getId(), fakeName);
+            fakeUser.getProperties().putAll(user.getProperties());
+            return fakeUser;
+        }
+        return user;
     }
 
     public static void setUp(NamechangeSimulator plugin) throws Exception {
