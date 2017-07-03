@@ -48,7 +48,7 @@ public final class NamechangeSimulator extends JavaPlugin {
     private BiMap<UUID, String> fakeNames = HashBiMap.create();
     private BiMap<UUID, String> originalNames = HashBiMap.create();
 
-    private LoadingCache<String, Boolean> usedNames = CacheBuilder.newBuilder().expireAfterWrite(60, TimeUnit.MINUTES).build(new UsedUsernameLoader());
+    private LoadingCache<String, Boolean> usedNames = CacheBuilder.newBuilder().expireAfterWrite(60, TimeUnit.MINUTES).build(new UsedUsernameChecker());
 
     private static final Pattern usernamePattern = Pattern.compile("^[a-zA-Z0-9_-]{3,16}$");//The regex to verify usernames;
     private static final String MOJANG_API = "https://api.mojang.com/users/profiles/minecraft/%username%";
@@ -284,7 +284,7 @@ public final class NamechangeSimulator extends JavaPlugin {
         }
     }
 
-    private class UsedUsernameLoader extends CacheLoader<String, Boolean> {
+    private class UsedUsernameChecker extends CacheLoader<String, Boolean> {
         @Override
         public Boolean load(String userName) throws Exception {
             URL url = new URL(MOJANG_API.replace("%username%", userName));
@@ -299,10 +299,7 @@ public final class NamechangeSimulator extends JavaPlugin {
             String response = reader.readLine();
             reader.close();
 
-            if(response == null || response.isEmpty()) {
-                return false;
-            }
-            return true;
+            return !(response == null || response.isEmpty());
         }
     }
 }
