@@ -5,6 +5,8 @@ This could be used as a nick system as it stores the fake names after logouts an
 
 **Please note that this is an extremely experimental plugin! Use at your own risk!**
 
+![Cool screenshot](https://i.moep.tv/dRsydhE3.png)
+
 ## Commands
 
 Aliases: `/namechangesimulator`, `/simulatenamechange`, `/namechange`, `/ns`
