@@ -1,7 +1,7 @@
 # NamechangeSimulator
 Bukkit plugin to simulate name changes by changing the username in the Gameprofile that Mojang's AuthLib returns while a player logs in.
 
-This could be used as a nick system as it stores the fake names after logouts and restarts and includes checks for the availability of such name with Mojang. But the main purpose is for testing how other plugins react to namechanges without having to buy/own a lot of acconts (or to have friends).
+This could be used as a nick system as it stores the fake names after logouts and restarts and includes checks for the availability of such name with Mojang. But the main purpose is for testing how other plugins react to namechanges without having to buy/own a lot of accounts (or to have friends).
 
 **Please note that this is an extremely experimental plugin! Use at your own risk!**
 
@@ -20,11 +20,11 @@ Aliases: `/namechangesimulator`, `/simulatenamechange`, `/namechange`, `/ns`
 Players with operator status have all permissions by default.
 
 Permission                                  | Description
---------------------------------------------|------------------------------------------------------------------------------------
+--------------------------------------------|-----------------------------------------------------------------
 `namechangesimulator.command`               | Use the plugin command
 `namechangesimulator.command.set`           | Change names via `/ns set`
 `namechangesimulator.command.set.others`    | Set the name of other players
-`namechangesimulator.command.set.used`      | Set usernames that are already in use by other Minecraft player
+`namechangesimulator.command.set.used`      | Set usernames that are already in use by other Minecraft players
 `namechangesimulator.command.reset`         | Reset names with `/ns list`
 `namechangesimulator.command.reset.others`  | Reset the name of other players
 `namechangesimulator.command.list`          | List all changed names with `/ns list`
