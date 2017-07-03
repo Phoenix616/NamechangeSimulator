@@ -21,6 +21,9 @@ permissions:
    namechangesimulator.command.set.others:
       description: Gives permission to set the name of other players
       default: op
+   namechangesimulator.command.set.used:
+      description: Gives permission to set usernames that are already in use by other Minecraft player
+      default: op
    namechangesimulator.command.reset:
       description: Gives permission to reset names
       default: op

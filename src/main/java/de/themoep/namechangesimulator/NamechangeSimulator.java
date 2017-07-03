@@ -19,6 +19,9 @@ package de.themoep.namechangesimulator;
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.apache.commons.lang.StringUtils;
@@ -28,8 +31,14 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -39,7 +48,10 @@ public final class NamechangeSimulator extends JavaPlugin {
     private BiMap<UUID, String> fakeNames = HashBiMap.create();
     private BiMap<UUID, String> originalNames = HashBiMap.create();
 
-    private final Pattern usernamePattern = Pattern.compile("^[a-zA-Z0-9_-]{3,16}$");//The regex to verify usernames;
+    private LoadingCache<String, Boolean> usedNames = CacheBuilder.newBuilder().expireAfterWrite(60, TimeUnit.MINUTES).build(new UsedUsernameLoader());
+
+    private static final Pattern usernamePattern = Pattern.compile("^[a-zA-Z0-9_-]{3,16}$");//The regex to verify usernames;
+    private static final String MOJANG_API = "https://api.mojang.com/users/profiles/minecraft/%username%";
 
     @Override
     public void onEnable() {
@@ -118,10 +130,31 @@ public final class NamechangeSimulator extends JavaPlugin {
                 return true;
             }
 
-            if (setName(targetId, name)) {
-                sender.sendMessage(ChatColor.GREEN + "Set name of " + getOriginalName(targetId) + " to " + name);
+            UUID finalTargetId = targetId;
+            Runnable setName = () -> {
+                if (setName(finalTargetId, name)) {
+                    sender.sendMessage(ChatColor.GREEN + "Set name of " + getOriginalName(finalTargetId) + " to " + name);
+                } else {
+                    sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use by an online player!");
+                }
+            };
+
+            if (sender.hasPermission(cmd.getPermission() + ".set.used")) {
+                setName.run();
             } else {
-                sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use!");
+                getServer().getScheduler().runTaskAsynchronously(this, () -> {
+                    try {
+                        if (originalNames.inverse().containsKey(name) || usedNames.get(name)) {
+                            sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use by another Minecraft user!");
+                            return;
+                        }
+                    } catch (ExecutionException e) {
+                        sender.sendMessage(ChatColor.RED + "Error while trying to check availability with Mojang!");
+                        getLogger().log(Level.SEVERE, "Error while trying to check availability of name " + name + " with Mojang!", e);
+                        return;
+                    }
+                    setName.run();
+                });
             }
 
         } else if ("reset".equalsIgnoreCase(args[0])) {
@@ -206,7 +239,7 @@ public final class NamechangeSimulator extends JavaPlugin {
     }
 
     private boolean setName(UUID targetId, String name) {
-        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name) || originalNames.inverse().containsKey(name)) {
+        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name)) {
             return false;
         }
         fakeNames.put(targetId, name);
@@ -237,7 +270,39 @@ public final class NamechangeSimulator extends JavaPlugin {
     private void kickPlayer(UUID targetId, String message) {
         Player player = getServer().getPlayer(targetId);
         if (player != null) {
-            player.kickPlayer(message);
+            runSync(() -> {
+                player.kickPlayer(message);
+            });
+        }
+    }
+
+    private void runSync(Runnable run) {
+        if (getServer().isPrimaryThread()) {
+            run.run();
+        } else {
+            getServer().getScheduler().runTask(this, run);
+        }
+    }
+
+    private class UsedUsernameLoader extends CacheLoader<String, Boolean> {
+        @Override
+        public Boolean load(String userName) throws Exception {
+            URL url = new URL(MOJANG_API.replace("%username%", userName));
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.connect();
+            if (connection.getResponseCode() == 202) {
+                return false;
+            }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String response = reader.readLine();
+            reader.close();
+
+            if(response == null || response.isEmpty()) {
+                return false;
+            }
+            return true;
         }
     }
 }
