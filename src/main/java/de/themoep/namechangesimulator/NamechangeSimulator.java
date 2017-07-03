@@ -21,6 +21,7 @@ package de.themoep.namechangesimulator;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -36,12 +37,29 @@ import java.util.stream.Collectors;
 public final class NamechangeSimulator extends JavaPlugin {
 
     private BiMap<UUID, String> fakeNames = HashBiMap.create();
+    private BiMap<UUID, String> originalNames = HashBiMap.create();
 
     private final Pattern usernamePattern = Pattern.compile("^[a-zA-Z0-9_-]{3,16}$");//The regex to verify usernames;
 
     @Override
     public void onEnable() {
         getCommand("namechangesimulator").setExecutor(this);
+        getLogger().info("Loading fake names from config...");
+
+        getConfig().getDefaults().createSection("names");
+        saveDefaultConfig();
+        for (String uuidString : getConfig().getConfigurationSection("names").getKeys(false)) {
+            try {
+                UUID uuid = UUID.fromString(uuidString);
+                fakeNames.put(uuid, getConfig().getString("names." + uuid + ".fake"));
+                if (getConfig().contains("names." + uuid + ".name")) {
+                    originalNames.put(uuid, getConfig().getString("names." + uuid + ".name"));
+                }
+            } catch (IllegalArgumentException e) {
+                getLogger().log(Level.SEVERE, "The configured UUID " + uuidString + " does not match the UUID format! " + e.getMessage());
+            }
+        }
+
         getLogger().info("Setting up NMS authentication service...");
         try {
             NMSAuthService.setUp(this);
@@ -60,15 +78,27 @@ public final class NamechangeSimulator extends JavaPlugin {
         }
         if ("set".equalsIgnoreCase(args[0])) {
             String name;
-            Player target;
+            UUID targetId;
             if (args.length == 1) {
                 return false;
             } else if (args.length > 2) {
                 if (sender.hasPermission(cmd.getPermission() + ".set.others")) {
-                    target = getServer().getPlayer(args[1]);
-                    if (target == null) {
-                        sender.sendMessage(ChatColor.RED + "The player " + args[1] + " was not found online!");
-                        return true;
+                    try {
+                        targetId = UUID.fromString(args[1]);
+                    } catch (IllegalArgumentException e) {
+                        Player target = getServer().getPlayer(args[1]);
+                        if (target != null) {
+                            targetId = target.getUniqueId();
+                        } else {
+                            targetId = originalNames.inverse().get(args[1]);
+                        }
+                        if (targetId == null) {
+                            targetId = fakeNames.inverse().get(args[1]);
+                        }
+                        if (targetId == null) {
+                            sender.sendMessage(ChatColor.RED + args[1] + " is neither a name of an online player nor an UUID?");
+                            return true;
+                        }
                     }
                     name = args[2];
                 } else {
@@ -76,10 +106,10 @@ public final class NamechangeSimulator extends JavaPlugin {
                     return true;
                 }
             } else if (sender instanceof Player) {
-                target = (Player) sender;
+                targetId = ((Player) sender).getUniqueId();
                 name = args[1];
             } else {
-                sender.sendMessage("Please use /" + label + " set <player> <name> from the console!");
+                sender.sendMessage("Please use /" + label + " set <player/uuid> <name> from the console!");
                 return true;
             }
 
@@ -88,39 +118,51 @@ public final class NamechangeSimulator extends JavaPlugin {
                 return true;
             }
 
-            String targetName = target.getName();
-            if (setName(target, name)) {
-                sender.sendMessage(ChatColor.GREEN + "Set name of " + targetName + " to " + name);
+            if (setName(targetId, name)) {
+                sender.sendMessage(ChatColor.GREEN + "Set name of " + getOriginalName(targetId) + " to " + name);
             } else {
                 sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use!");
             }
 
         } else if ("reset".equalsIgnoreCase(args[0])) {
-            Player target;
+            UUID targetId;
             if (args.length > 1) {
                 if (sender.hasPermission(cmd.getPermission() + ".reset.others")) {
-                    target = getServer().getPlayer(args[1]);
-                    if (target == null) {
-                        sender.sendMessage(ChatColor.RED + "The player " + args[1] + " was not found online!");
-                        return true;
+                    try {
+                        targetId = UUID.fromString(args[1]);
+                    } catch (IllegalArgumentException e) {
+                        Player target = getServer().getPlayer(args[1]);
+                        if (target != null) {
+                            targetId = target.getUniqueId();
+                        } else {
+                            targetId = originalNames.inverse().get(args[1]);
+                        }
+                        if (targetId == null) {
+                            targetId = fakeNames.inverse().get(args[1]);
+                        }
+                        if (targetId == null) {
+                            sender.sendMessage(ChatColor.RED + args[1] + " is neither a name of an online player nor an UUID?");
+                            return true;
+                        }
                     }
                 } else {
                     sender.sendMessage(cmd.getPermissionMessage().replace("<permission>", cmd.getPermission() + ".reset.others"));
                     return true;
                 }
             } else if (sender instanceof Player) {
-                target = (Player) sender;
+                targetId = ((Player) sender).getUniqueId();
             } else {
-                sender.sendMessage("Please use /" + label + " reset <player> <name> from the console!");
+                sender.sendMessage("Please use /" + label + " reset <player/uuid> from the console!");
                 return true;
             }
-            if (resetName(target)) {
-                sender.sendMessage(ChatColor.GREEN + "Reset name of " + target.getName());
+            if (resetName(targetId)) {
+                sender.sendMessage(ChatColor.GREEN + "Reset name of " + getOriginalName(targetId));
             } else {
-                sender.sendMessage(ChatColor.YELLOW + target.getName() + " does not have a changed name?");
+                sender.sendMessage(ChatColor.YELLOW + "" + getOriginalName(targetId) + " does not have a changed name?");
             }
 
         } else if ("list".equalsIgnoreCase(args[0])) {
+            sender.sendMessage(ChatColor.RED + getName() + ChatColor.YELLOW + " " + getDescription().getVersion() + " by " + StringUtils.join(getDescription().getAuthors(), ", "));
             sender.sendMessage(ChatColor.YELLOW + "Fake usernames:");
 
             for (Map.Entry<UUID, String> entry : fakeNames.entrySet().stream().sorted((e1, e2) -> {
@@ -137,9 +179,9 @@ public final class NamechangeSimulator extends JavaPlugin {
             }).collect(Collectors.toList())) {
                 Player p = getServer().getPlayer(entry.getKey());
                 if (p != null) {
-                    sender.sendMessage(ChatColor.WHITE + p.getName() + " -> " + entry.getValue());
+                    sender.sendMessage(ChatColor.WHITE + "" + getOriginalName(entry.getKey()) + " -> " + entry.getValue());
                 } else {
-                    sender.sendMessage(ChatColor.GRAY + "" + entry.getKey() + " -> " + entry.getValue());
+                    sender.sendMessage(ChatColor.GRAY + "" + getOriginalName(entry.getKey()) + " -> " + entry.getValue());
                 }
             }
         }
@@ -148,26 +190,54 @@ public final class NamechangeSimulator extends JavaPlugin {
         return true;
     }
 
-    private boolean setName(Player target, String name) {
-        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name)) {
+    private String getOriginalName(UUID playerId) {
+        if (originalNames.containsKey(playerId)) {
+            return originalNames.get(playerId);
+        }
+        return playerId.toString();
+    }
+
+    void addOriginalName(UUID playerId, String name) {
+        originalNames.put(playerId, name);
+        if (getConfig().contains("names." + playerId)) {
+            getConfig().set("names." + playerId + ".name", name);
+            saveConfig();
+        }
+    }
+
+    private boolean setName(UUID targetId, String name) {
+        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name) || originalNames.inverse().containsKey(name)) {
             return false;
         }
-
-        fakeNames.put(target.getUniqueId(), name);
-        target.kickPlayer("Please rejoin so that your changed name takes effect!");
+        fakeNames.put(targetId, name);
+        getConfig().set("names." + targetId + ".fake", name);
+        if (originalNames.containsKey(targetId)) {
+            getConfig().set("names." + targetId + ".name", originalNames.get(targetId));
+        }
+        saveConfig();
+        kickPlayer(targetId, "Please rejoin so that your changed name takes effect!");
         return true;
     }
 
-    private boolean resetName(Player target) {
-        if (!fakeNames.containsKey(target.getUniqueId())) {
-            return false;
+    private boolean resetName(UUID targetId) {
+        String previous = fakeNames.remove(targetId);
+        getConfig().set("names." + targetId, null);
+        saveConfig();
+        if (previous != null) {
+            kickPlayer(targetId, "Please rejoin so that your name reset takes effect!");
+            return true;
         }
-        fakeNames.remove(target.getUniqueId());
-        target.kickPlayer("Please rejoin so that your name reset takes effect!");
-        return true;
+        return false;
     }
 
     public String getFakeName(UUID playerId) {
         return fakeNames.get(playerId);
+    }
+
+    private void kickPlayer(UUID targetId, String message) {
+        Player player = getServer().getPlayer(targetId);
+        if (player != null) {
+            player.kickPlayer(message);
+        }
     }
 }

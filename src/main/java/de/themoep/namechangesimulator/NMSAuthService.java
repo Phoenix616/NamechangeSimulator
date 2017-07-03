@@ -44,10 +44,12 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
         if (user == null) {
             return null;
         }
+        plugin.addOriginalName(user.getId(), user.getName());
         String fakeName = plugin.getFakeName(user.getId());
         if (fakeName != null) {
             GameProfile fakeUser = new GameProfile(user.getId(), fakeName);
             fakeUser.getProperties().putAll(user.getProperties());
+            plugin.getLogger().log(Level.INFO, "Set name of " + user.getName() + "/" + user.getId() + " to " + fakeUser.getName());
             return fakeUser;
         }
         return user;
