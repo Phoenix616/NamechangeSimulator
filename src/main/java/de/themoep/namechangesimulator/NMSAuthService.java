@@ -23,6 +23,8 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -50,8 +52,14 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
             GameProfile fakeUser = new GameProfile(user.getId(), fakeName);
             fakeUser.getProperties().putAll(user.getProperties());
             plugin.getLogger().log(Level.INFO, "Set name of " + user.getName() + "/" + user.getId() + " to " + fakeUser.getName());
-            return fakeUser;
+            user = fakeUser;
         }
+
+        Player player = Bukkit.getPlayer(user.getName());
+        if (player != null && player.isOnline()) {
+            player.kickPlayer("Someone joined with your username " + player.getName() + "!");
+        }
+
         return user;
     }
 
