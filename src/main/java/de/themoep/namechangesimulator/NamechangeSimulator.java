@@ -130,13 +130,15 @@ public final class NamechangeSimulator extends JavaPlugin {
                 return true;
             }
 
+            if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name)) {
+                sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use by an online player!");
+                return true;
+            }
+
             UUID finalTargetId = targetId;
             Runnable setName = () -> {
-                if (setName(finalTargetId, name)) {
-                    sender.sendMessage(ChatColor.GREEN + "Set name of " + getOriginalName(finalTargetId) + " to " + name);
-                } else {
-                    sender.sendMessage(ChatColor.RED + "The name " + name + " is already in use by an online player!");
-                }
+                setName(finalTargetId, name);
+                sender.sendMessage(ChatColor.GREEN + "Set name of " + getOriginalName(finalTargetId) + " to " + name);
             };
 
             if (sender.hasPermission(cmd.getPermission() + ".set.used")) {
@@ -238,10 +240,7 @@ public final class NamechangeSimulator extends JavaPlugin {
         }
     }
 
-    private boolean setName(UUID targetId, String name) {
-        if (getServer().getPlayer(name) != null || fakeNames.inverse().containsKey(name)) {
-            return false;
-        }
+    private void setName(UUID targetId, String name) {
         fakeNames.put(targetId, name);
         getConfig().set("names." + targetId + ".fake", name);
         if (originalNames.containsKey(targetId)) {
@@ -249,7 +248,6 @@ public final class NamechangeSimulator extends JavaPlugin {
         }
         saveConfig();
         kickPlayer(targetId, "Please rejoin so that your changed name takes effect!");
-        return true;
     }
 
     private boolean resetName(UUID targetId) {
