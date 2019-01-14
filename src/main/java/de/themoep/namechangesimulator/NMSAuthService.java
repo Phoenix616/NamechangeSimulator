@@ -2,7 +2,7 @@ package de.themoep.namechangesimulator;
 
 /*
  *  NamechangeSimulator Bukkit plugin
- *  Copyright (C) 2017 Max Lee (https://github.com/Phoenix616)
+ *  Copyright (C) 2018 Max Lee (https://github.com/Phoenix616)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -82,9 +82,14 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
                 sessionServiceVariableName = "W";
                 sessionAuthVariableName = "V";
                 break;
+            case "v1_13_R1":
+            case "v1_13_R2":
+                sessionServiceVariableName = "V";
+                sessionAuthVariableName = "U";
+                break;
             default:
                 plugin.getLogger().log(Level.SEVERE, plugin.getName() + " currently does not support spigot version " + plugin.getServer().getVersion());
-                plugin.getLogger().log(Level.SEVERE, "This build of " +  plugin.getName() + " only supports minecraft versions 1.8.8, 1.9, 1.10, 1.11 and 1.12");
+                plugin.getLogger().log(Level.SEVERE, "This build of " +  plugin.getName() + " only supports Minecraft versions 1.8.8, 1.9, 1.10, 1.11, 1.12 and 1.13");
                 plugin.getPluginLoader().disablePlugin(plugin);
                 return;
         }

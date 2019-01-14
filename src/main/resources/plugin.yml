@@ -3,6 +3,7 @@ version: '${minecraft.plugin.version}'
 main: de.themoep.namechangesimulator.NamechangeSimulator
 load: STARTUP
 authors: [Phoenix616]
+api-version: 1.13
 description: Bukkit plugin to simulate name changes
 commands:
    namechangesimulator:

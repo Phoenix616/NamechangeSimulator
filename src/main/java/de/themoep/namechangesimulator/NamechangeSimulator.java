@@ -2,7 +2,7 @@ package de.themoep.namechangesimulator;
 
 /*
  *  NamechangeSimulator Bukkit plugin
- *  Copyright (C) 2017 Max Lee (https://github.com/Phoenix616)
+ *  Copyright (C) 2018 Max Lee (https://github.com/Phoenix616)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
