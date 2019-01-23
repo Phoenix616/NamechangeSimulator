@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -58,14 +59,16 @@ public final class NamechangeSimulator extends JavaPlugin {
         getCommand("namechangesimulator").setExecutor(this);
         getLogger().info("Loading fake names from config...");
 
-        getConfig().getDefaults().createSection("names");
-        saveDefaultConfig();
-        for (String uuidString : getConfig().getConfigurationSection("names").getKeys(false)) {
+        ConfigurationSection names = getConfig().getConfigurationSection("names");
+        if (names == null) {
+            names = getConfig().createSection("names");
+        }
+        for (String uuidString : names.getKeys(false)) {
             try {
                 UUID uuid = UUID.fromString(uuidString);
-                fakeNames.put(uuid, getConfig().getString("names." + uuid + ".fake"));
-                if (getConfig().contains("names." + uuid + ".name")) {
-                    originalNames.put(uuid, getConfig().getString("names." + uuid + ".name"));
+                fakeNames.put(uuid, names.getString(uuid + ".fake"));
+                if (names.contains(uuid + ".name")) {
+                    originalNames.put(uuid, names.getString(uuid + ".name"));
                 }
             } catch (IllegalArgumentException e) {
                 getLogger().log(Level.SEVERE, "The configured UUID " + uuidString + " does not match the UUID format! " + e.getMessage());
