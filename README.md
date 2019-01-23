@@ -37,7 +37,7 @@ Development builds can be downloaded here: https://ci.minebench.de/job/Namechang
 
 ## Building
 
-You can build the project with maven. Due to it proxying the YggdrasilMinecraftSessionService from Mojang's AuthLib it needs CraftBukkit or Spigot to build.
+You can build the project with maven. It directly depends on Mojang's library repository at https://libraries.minecraft.net/ to be able to change AuthLib instead of having to depend on pre-compiled Spigot or CraftBukkit jars.
 
 ## License
 
