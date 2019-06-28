@@ -79,7 +79,8 @@ public final class NamechangeSimulator extends JavaPlugin {
         try {
             NMSAuthService.setUp(this);
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while setting up fake auth services. The plugin might not be compatbile with your server version :(", e);
+            getLogger().log(Level.SEVERE, "Error while setting up fake auth services. The plugin might not be compatible with your server version (" + getServer().getVersion() + ") :(", e);
+            getPluginLoader().disablePlugin(this);
         }
     }
 
