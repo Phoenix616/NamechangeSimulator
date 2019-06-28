@@ -87,9 +87,13 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
                 sessionServiceVariableName = "V";
                 sessionAuthVariableName = "U";
                 break;
+            case "v1_14_R1":
+                sessionServiceVariableName = "minecraftSessionService";
+                sessionAuthVariableName = "yggdrasilAuthenticationService";
+                break;
             default:
                 plugin.getLogger().log(Level.SEVERE, plugin.getName() + " currently does not support spigot version " + plugin.getServer().getVersion());
-                plugin.getLogger().log(Level.SEVERE, "This build of " +  plugin.getName() + " only supports Minecraft versions 1.8.8, 1.9, 1.10, 1.11, 1.12 and 1.13");
+                plugin.getLogger().log(Level.SEVERE, "This build of " +  plugin.getName() + " only supports Minecraft versions 1.8.8, 1.9, 1.10, 1.11, 1.12, 1.13 and 1.14");
                 plugin.getPluginLoader().disablePlugin(plugin);
                 return;
         }
