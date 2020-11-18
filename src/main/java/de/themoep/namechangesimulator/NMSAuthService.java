@@ -19,9 +19,12 @@ package de.themoep.namechangesimulator;
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+import com.mojang.authlib.EnvironmentParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.exceptions.AuthenticationUnavailableException;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
+import com.mojang.authlib.yggdrasil.YggdrasilEnvironment;
+import com.mojang.authlib.yggdrasil.YggdrasilGameProfileRepository;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -36,7 +39,7 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
     private final NamechangeSimulator plugin;
 
     public NMSAuthService(NamechangeSimulator plugin, YggdrasilAuthenticationService authenticationService) {
-        super(authenticationService);
+        super(authenticationService, EnvironmentParser.getEnvironmentFromProperties().orElse(YggdrasilEnvironment.PROD));
         this.plugin = plugin;
     }
 
@@ -87,12 +90,18 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
                 sessionServiceVariableName = "V";
                 sessionAuthVariableName = "U";
                 break;
-            default:
-                plugin.getLogger().log(Level.WARNING, "Your server version " + plugin.getServer().getVersion() + "/" + nmsVersion + " is untested! Please report any errors.");
             case "v1_14_R1":
+            case "v1_15_R1":
                 sessionServiceVariableName = "minecraftSessionService";
                 sessionAuthVariableName = "yggdrasilAuthenticationService";
                 break;
+            default:
+                plugin.getLogger().log(Level.WARNING, "Your server version " + plugin.getServer().getVersion() + "/" + nmsVersion + " is untested! Please report any errors.");
+            case "v1_16_R1":
+            case "v1_16_R2":
+            case "v1_16_R3":
+                setupNew(plugin, nmsVersion);
+                return;
         }
 
         Method method = Class.forName("net.minecraft.server." + nmsVersion + ".MinecraftServer").getMethod("getServer");
@@ -109,6 +118,25 @@ public class NMSAuthService extends YggdrasilMinecraftSessionService {
 
         sessionServiceVariable.set(minecraftServer,
                 new NMSAuthService(plugin, (YggdrasilAuthenticationService) sessionAuthVariable.get(minecraftServer)));
+    }
+
+    private static void setupNew(NamechangeSimulator plugin, String nmsVersion) throws Exception {
+
+        Class serverClass = Class.forName("net.minecraft.server." + nmsVersion + ".MinecraftServer");
+
+        Object minecraftServer = serverClass.getMethod("getServer").invoke(null);
+
+        Field sessionServiceField = serverClass.getDeclaredField("minecraftSessionService");
+        sessionServiceField.setAccessible(true);
+
+        Object gameProfileRepository = serverClass.getMethod("getGameProfileRepository").invoke(minecraftServer);
+
+        Field authServiceField = YggdrasilGameProfileRepository.class.getDeclaredField("authenticationService");
+        authServiceField.setAccessible(true);
+
+        sessionServiceField.set(minecraftServer,
+                new NMSAuthService(plugin, (YggdrasilAuthenticationService) authServiceField.get(gameProfileRepository)));
+
     }
 
 }
